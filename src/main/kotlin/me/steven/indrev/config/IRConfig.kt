@@ -14,7 +14,7 @@ object IRConfig {
     lateinit var generators: Generators
     lateinit var machines: Machines
     lateinit var cables: Cables
-    lateinit var upgrades: Upgrades
+    lateinit var enhancers: Enhancers
     lateinit var oregen: OreGen
     lateinit var hud: Hud
 
@@ -26,7 +26,7 @@ object IRConfig {
         generators = readOrCreate("generators.json") { Generators() }
         machines = readOrCreate("machines.json") { Machines() }
         cables = readOrCreate("cables.json") { Cables() }
-        upgrades = readOrCreate("upgrades.json") { Upgrades() }
+        enhancers = readOrCreate("enhancers.json") { Enhancers() }
         oregen = readOrCreate("oregen.json") { OreGen() }
         hud = readOrCreate("hud.json") { Hud() }
     }
@@ -57,7 +57,7 @@ object IRConfig {
         buf.writeString(gson.toJson(generators))
         buf.writeString(gson.toJson(machines))
         buf.writeString(gson.toJson(cables))
-        buf.writeString(gson.toJson(upgrades))
+        buf.writeString(gson.toJson(enhancers))
         buf.writeString(gson.toJson(oregen))
         buf.writeString(gson.toJson(hud))
     }
@@ -66,7 +66,7 @@ object IRConfig {
         generators = gson.fromJson(buf.readString(), Generators::class.java)
         machines = gson.fromJson(buf.readString(), Machines::class.java)
         cables = gson.fromJson(buf.readString(), Cables::class.java)
-        upgrades = gson.fromJson(buf.readString(), Upgrades::class.java)
+        enhancers = gson.fromJson(buf.readString(), Enhancers::class.java)
         oregen = gson.fromJson(buf.readString(), OreGen::class.java)
         hud = gson.fromJson(buf.readString(), Hud::class.java)
     }
@@ -157,6 +157,14 @@ class Machines {
     val farmerMk3: MachineConfig = MachineConfig(64.0, 30.0, 25000.0, Tier.MK3.io)
 
     val farmerMk4: MachineConfig = MachineConfig(128.0, 20.0, 50000.0, Tier.MK4.io)
+
+    val slaughterMk1: MachineConfig = MachineConfig(16.0, 50.0, 1000.0, Tier.MK1.io)
+
+    val slaughterMk2: MachineConfig = MachineConfig(32.0, 40.0, 5000.0, Tier.MK2.io)
+
+    val slaughterMk3: MachineConfig = MachineConfig(64.0, 30.0, 25000.0, Tier.MK3.io)
+
+    val slaughterMk4: MachineConfig = MachineConfig(128.0, 20.0, 50000.0, Tier.MK4.io)
 
     val rancherMk1: MachineConfig = MachineConfig(16.0, 50.0, 1000.0, Tier.MK1.io)
 
@@ -253,10 +261,11 @@ class Cables {
     val fluidPipeMk4 = 8
 }
 
-class Upgrades  {
-    val speedUpgradeModifier = 6.5
-    val energyUpgradeModifier = 1.02
-    val bufferUpgradeModifier = 25000.0
+class Enhancers  {
+    val speedEnhancerModifier = 6.5
+    val energyEnhancerModifier = 1.02
+    val bufferEnhancerModifier = 25000.0
+    val damageEnhancerModifier = 4
 }
 
 class OreGen  {
