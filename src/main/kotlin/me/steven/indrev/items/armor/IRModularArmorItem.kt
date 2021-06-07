@@ -49,7 +49,8 @@ class IRModularArmorItem(slot: EquipmentSlot, maxStored: Double, settings: Setti
 
     override fun getColor(stack: ItemStack?): Int {
         val NbtCompound = stack!!.getSubTag("display")
-        return if (NbtCompound != null && NbtCompound.contains("color", 99)) NbtCompound.getInt("color") else -1
+        // Return black by default
+        return if (NbtCompound != null && NbtCompound.contains("color", 99)) NbtCompound.getInt("color") else 1908001
     }
 
     fun getMaxShield(protectionLevel: Int) = protectionLevel * 100.0
