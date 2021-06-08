@@ -6,21 +6,23 @@ import me.steven.indrev.api.machines.Tier
 import me.steven.indrev.blockentities.crafters.EnhancerProvider
 import me.steven.indrev.config.BasicMachineConfig
 import me.steven.indrev.inventories.inventory
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.registry.MachineRegistry
 import me.steven.indrev.utils.FakePlayerEntity
 import me.steven.indrev.utils.redirectDrops
+import net.minecraft.block.BlockState
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.decoration.ArmorStandEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.SwordItem
 import net.minecraft.server.world.ServerWorld
+import net.minecraft.util.math.BlockPos
 
-class SlaughterBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.SLAUGHTER_REGISTRY), EnhancerProvider {
+class SlaughterBlockEntity(tier: Tier, pos: BlockPos, state: BlockState) : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.SLAUGHTER_REGISTRY, pos, state), EnhancerProvider {
 
     override val backingMap: Object2IntMap<Enhancer> = Object2IntArrayMap()
-    override val enhancementsSlots: IntArray = intArrayOf(11, 12, 13, 14)
+    override val enhancerSlots: IntArray = intArrayOf(11, 12, 13, 14)
     override val availableEnhancers: Array<Enhancer> = arrayOf(Enhancer.SPEED, Enhancer.ENERGY, Enhancer.BUFFER, Enhancer.DAMAGE)
 
     init {
@@ -68,16 +70,16 @@ class SlaughterBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfi
         cooldown = 0.0
     }
 
-    override fun getBaseValue(enhancer: Enhancer): Double =
-        when (enhancer) {
+    override fun getBaseValue(upgrade: Enhancer): Double =
+        when (upgrade) {
             Enhancer.ENERGY -> config.energyCost
             Enhancer.SPEED -> 1.0
             Enhancer.BUFFER -> config.maxEnergyStored
             else -> 0.0
         }
 
-    override fun getMaxEnhancer(enhancer: Enhancer): Int {
-        return if (enhancer == Enhancer.SPEED || enhancer == Enhancer.DAMAGE) return 1 else super.getMaxEnhancer(enhancer)
+    override fun getMaxCount(enhancer: Enhancer): Int {
+        return if (enhancer == Enhancer.SPEED || enhancer == Enhancer.DAMAGE) return 1 else super.getMaxCount(enhancer)
     }
 
     override fun getEnergyCapacity(): Double = Enhancer.getBuffer(this)

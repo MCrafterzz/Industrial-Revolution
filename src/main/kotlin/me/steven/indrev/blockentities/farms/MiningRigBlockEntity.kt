@@ -15,7 +15,7 @@ import me.steven.indrev.config.BasicMachineConfig
 import me.steven.indrev.config.IRConfig
 import me.steven.indrev.inventories.inventory
 import me.steven.indrev.items.misc.IRResourceReportItem
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.registry.MachineRegistry
 import me.steven.indrev.utils.*
 import me.steven.indrev.world.chunkveins.ChunkVeinData
@@ -25,7 +25,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.network.PacketByteBuf
 import net.minecraft.screen.ArrayPropertyDelegate
 import net.minecraft.server.world.ServerWorld
@@ -34,10 +34,11 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.registry.Registry
 
-class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.MINER_REGISTRY), EnhancerProvider {
+class MiningRigBlockEntity(tier: Tier, pos: BlockPos, state: BlockState)
+    : MachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.MINING_RIG_REGISTRY, pos, state), EnhancerProvider {
 
     override val backingMap: Object2IntMap<Enhancer> = Object2IntArrayMap()
-    override val enhancementsSlots: IntArray = intArrayOf(10, 11, 12, 13)
+    override val enhancerSlots: IntArray = intArrayOf(10, 11, 12, 13)
     override val availableEnhancers: Array<Enhancer> = arrayOf(Enhancer.BUFFER, Enhancer.ENERGY)
 
     init {
@@ -64,8 +65,8 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
         if (world?.isClient == true) return
         val inventory = inventoryComponent?.inventory ?: return
         cacheVeinType()
-        val enhancements = getEnhancers(inventory)
-        requiredPower = Enhancer.getEnergyCost(enhancements, this)
+        val upgrades = getEnhancers(inventory)
+        requiredPower = Enhancer.getEnergyCost(upgrades, this)
         if (finished) {
             workingState = false
             getActiveDrills().forEach { drill -> drill.setWorkingState(false) }
@@ -73,7 +74,7 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
         } else if (isLocationCorrect() && use(requiredPower)) {
             workingState = true
             getActiveDrills().forEach { drill -> drill.setWorkingState(true) }
-            mining += Enhancer.getSpeed(enhancements, this)
+            mining += Enhancer.getSpeed(upgrades, this)
             temperatureComponent?.tick(true)
         } else {
             workingState = false
@@ -94,7 +95,7 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
                 }
                 data.explored++
                 mining = 0.0
-                val generatedOre = chunkVeinType!!.outputs.pickRandom(world?.random)
+                val generatedOre = chunkVeinType!!.outputs.pickRandom()
                 lastMinedItem = ItemStack(generatedOre)
                 inventory.output(lastMinedItem.copy())
                 sync()
@@ -143,7 +144,7 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
     private fun isLocationCorrect(): Boolean {
         val inventory = inventoryComponent?.inventory ?: return false
         val scanOutput = inventory.getStack(14).tag ?: return false
-        val scanChunkPos = getChunkPos(scanOutput.getString("ChunkPos"))
+        val scanChunkPos = getChunkPos(scanOutput.getCompound("ChunkPos"))
         val chunkPos = world?.getChunk(pos)?.pos ?: return false
         return chunkPos == scanChunkPos
     }
@@ -165,12 +166,8 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
     private inline fun updateData(action: (ChunkVeinData?) -> Boolean) {
         val inventory = inventoryComponent?.inventory ?: return
         val scanOutput = inventory.getStack(14).tag ?: return
-        val chunkPos = getChunkPos(scanOutput.getString("ChunkPos"))
-        val state =
-            (world as ServerWorld).persistentStateManager.getOrCreate(
-                { ChunkVeinState(ChunkVeinState.STATE_OVERWORLD_KEY) },
-                ChunkVeinState.STATE_OVERWORLD_KEY
-            )
+        val chunkPos = getChunkPos(scanOutput.getCompound("ChunkPos"))
+        val state = ChunkVeinState.getState(world as ServerWorld)
         if (action(state.veins[chunkPos])) state.markDirty()
     }
 
@@ -191,11 +188,11 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
         }
     }
 
-    override fun getBaseValue(enhancer: Enhancer): Double {
+    override fun getBaseValue(upgrade: Enhancer): Double {
         val activeDrills = getActiveDrills()
-        return when (enhancer) {
+        return when (upgrade) {
             Enhancer.ENERGY -> config.energyCost + (IRConfig.machines.drill * activeDrills.size)
-            Enhancer.SPEED -> activeDrills.sumByDouble { blockEntity ->
+            Enhancer.SPEED -> activeDrills.sumOf { blockEntity ->
                 blockEntity.inventory[0]
                 blockEntity.getSpeedMultiplier()
             }
@@ -225,33 +222,33 @@ class MinerBlockEntity(tier: Tier) : MachineBlockEntity<BasicMachineConfig>(tier
         }
     }
 
-    override fun toTag(tag: CompoundTag?): CompoundTag {
+    override fun writeNbt(tag: NbtCompound?): NbtCompound {
         tag?.putDouble("Mining", mining)
         if (chunkVeinType != null)
             tag?.putString("VeinIdentifier", chunkVeinType?.id.toString())
-        return super.toTag(tag)
+        return super.writeNbt(tag)
     }
 
-    override fun fromTag(state: BlockState?, tag: CompoundTag?) {
+    override fun readNbt(tag: NbtCompound?) {
         mining = tag?.getDouble("Mining") ?: 0.0
         if (tag?.contains("VeinIdentifier") == true && !tag.getString("VeinIdentifier").isNullOrEmpty())
             chunkVeinType = VeinType.REGISTERED[Identifier(tag.getString("VeinIdentifier"))]
-        super.fromTag(state, tag)
+        super.readNbt(tag)
     }
 
-    override fun toClientTag(tag: CompoundTag?): CompoundTag {
+    override fun toClientTag(tag: NbtCompound?): NbtCompound {
         tag?.putDouble("Mining", mining)
         if (chunkVeinType != null)
             tag?.putString("VeinIdentifier", chunkVeinType?.id.toString())
-        tag?.put("LastMinedBlock", lastMinedItem.toTag(CompoundTag()))
+        tag?.put("LastMinedBlock", lastMinedItem.writeNbt(NbtCompound()))
         return super.toClientTag(tag)
     }
 
-    override fun fromClientTag(tag: CompoundTag?) {
+    override fun fromClientTag(tag: NbtCompound?) {
         mining = tag?.getDouble("Mining") ?: 0.0
         if (tag?.contains("VeinIdentifier") == true && !tag.getString("VeinIdentifier").isNullOrEmpty())
             chunkVeinType = VeinType.REGISTERED[Identifier(tag.getString("VeinIdentifier"))]
-        lastMinedItem = ItemStack.fromTag(tag?.getCompound("LastMinedBlock"))
+        lastMinedItem = ItemStack.fromNbt(tag?.getCompound("LastMinedBlock"))
         super.fromClientTag(tag)
     }
 

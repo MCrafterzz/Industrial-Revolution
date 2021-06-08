@@ -6,7 +6,7 @@ import me.steven.indrev.api.machines.Tier
 import me.steven.indrev.blockentities.crafters.EnhancerProvider
 import me.steven.indrev.config.BasicMachineConfig
 import me.steven.indrev.inventories.inventory
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.registry.MachineRegistry
 import me.steven.indrev.utils.*
 import net.fabricmc.fabric.api.tool.attribute.v1.FabricToolTags
@@ -24,19 +24,19 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.chunk.Chunk
 
-class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.CHOPPER_REGISTRY), EnhancerProvider {
+class ChopperBlockEntity(tier: Tier, pos: BlockPos, state: BlockState) : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.CHOPPER_REGISTRY, pos, state), EnhancerProvider {
 
     override val backingMap: Object2IntMap<Enhancer> = Object2IntArrayMap()
-    override val enhancementsSlots: IntArray = intArrayOf(15, 16, 17, 18)
+    override val enhancerSlots: IntArray = intArrayOf(15, 16, 17, 18)
     override val availableEnhancers: Array<Enhancer> = Enhancer.DEFAULT
 
     init {
         this.inventoryComponent = inventory(this) {
             input {
                 slots = intArrayOf(2, 3, 4, 5)
-                2 filter { (_, item) -> item.isIn(FabricToolTags.AXES) || item.isIn(FabricToolTags.SWORDS) }
+                2 filter { stack -> stack.isIn(FabricToolTags.AXES) || stack.isIn(FabricToolTags.SWORDS) }
                 3 filter { (_, item) -> item is BoneMealItem }
-                4..5 filter { (_, item), _ -> item.isIn(ItemTags.SAPLINGS)
+                4..5 filter { (stack, item), _ -> stack.isIn(ItemTags.SAPLINGS)
                         || (item is BlockItem && (item.block is MushroomPlantBlock || item.block is BambooBlock)) }
             }
             output { slots = intArrayOf(6, 7, 8, 9, 10, 11, 12, 13, 14) }
@@ -55,9 +55,9 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
     override fun machineTick() {
         if (world?.isClient == true) return
         val inventory = inventoryComponent?.inventory ?: return
-        val enhancements = getEnhancers(inventory)
-        cooldown += Enhancer.getSpeed(enhancements, this)
-        val energyCost = Enhancer.getEnergyCost(enhancements, this)
+        val upgrades = getEnhancers(inventory)
+        cooldown += Enhancer.getSpeed(upgrades, this)
+        val energyCost = Enhancer.getEnergyCost(upgrades, this)
         if (cooldown < config.processSpeed || ticks % 15 != 0 || !canUse(energyCost))
             return
         val area = getWorkingArea()
@@ -135,15 +135,15 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         }
         val block = blockState.block
         when {
-            toolStack.item.isIn(FabricToolTags.AXES)
-                    && (block.isIn(BlockTags.LOGS) || block is MushroomBlock || block == Blocks.MUSHROOM_STEM) -> {
+            toolStack.isIn(FabricToolTags.AXES)
+                    && (blockState.isIn(BlockTags.LOGS) || block is MushroomBlock || block == Blocks.MUSHROOM_STEM) -> {
                 if (!damageTool(1)) return false
                 world?.setBlockState(blockPos, Blocks.AIR.defaultState, 3)
             }
             block is LeavesBlock -> {
                 world?.setBlockState(blockPos, Blocks.AIR.defaultState, 3)
             }
-            toolStack.item.isIn(FabricToolTags.SWORDS) && block is BambooBlock && blockPos.y > pos.y -> {
+            toolStack.isIn(FabricToolTags.SWORDS) && block is BambooBlock && blockPos.y > pos.y -> {
                 val upPos = blockPos.up()
                 val up = chunk.getBlockState(upPos)
                 scannedBlocks.add(upPos)
@@ -162,7 +162,7 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         val block = blockState.block
         when {
             item is BoneMealItem && itemStack.count > 1
-                    && (block.isIn(BlockTags.SAPLINGS) || block is MushroomPlantBlock || block is BambooBlock || block is BambooSaplingBlock)
+                    && (blockState.isIn(BlockTags.SAPLINGS) || block is MushroomPlantBlock || block is BambooBlock || block is BambooSaplingBlock)
                     && block is Fertilizable
                     && block.isFertilizable(world, pos, blockState, false)
                     && block.canGrow(world, world?.random, pos, blockState) -> {
@@ -172,7 +172,7 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
             }
             block is AirBlock
                     && item is BlockItem
-                    && (item.isIn(ItemTags.SAPLINGS) || item.block is MushroomPlantBlock || item.block is BambooBlock)
+                    && (itemStack.isIn(ItemTags.SAPLINGS) || item.block is MushroomPlantBlock || item.block is BambooBlock)
                     && item.block.defaultState.canPlaceAt(world, pos)
                     && itemStack.count > 1 -> {
                 if (item.block is BambooBlock)
@@ -186,8 +186,8 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         return true
     }
 
-    override fun getBaseValue(enhancer: Enhancer): Double =
-        when (enhancer) {
+    override fun getBaseValue(upgrade: Enhancer): Double =
+        when (upgrade) {
             Enhancer.ENERGY -> config.energyCost
             Enhancer.SPEED -> 1.0
             Enhancer.BUFFER -> config.maxEnergyStored
@@ -199,8 +199,8 @@ class ChopperBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         return box.expand(range.toDouble(), 0.0, range.toDouble()).stretch(0.0, 40.0, 0.0)
     }
 
-    override fun getMaxEnhancer(enhancer: Enhancer): Int {
-        return if (enhancer == Enhancer.SPEED) return 12 else super.getMaxEnhancer(enhancer)
+    override fun getMaxCount(upgrade: Enhancer): Int {
+        return if (upgrade == Enhancer.SPEED) return 12 else super.getMaxCount(upgrade)
     }
 
     override fun getEnergyCapacity(): Double = Enhancer.getBuffer(this)

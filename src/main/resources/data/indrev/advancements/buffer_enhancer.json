@@ -1,6 +1,15 @@
 {
   "display": {
     "icon": {
+<<<<<<< HEAD:src/main/resources/data/indrev/advancements/energy_enhancer.json
+      "item": "indrev:energy_enhancer"
+    },
+    "title": {
+      "translate": "advancements.indrev.energy_enhancer"
+    },
+    "description": {
+      "translate": "advancements.indrev.energy_enhancer.description"
+=======
       "item": "indrev:buffer_enhancer"
     },
     "title": {
@@ -8,6 +17,7 @@
     },
     "description": {
       "translate": "advancements.indrev.buffer_enhancer.description"
+>>>>>>> b150a33d2899d92929ad21494c6ef5910dca0d5a:src/main/resources/data/indrev/advancements/buffer_enhancer.json
     }
   },
   "parent": "indrev:empty_enhancer",
@@ -17,7 +27,11 @@
       "conditions": {
         "items": [
           {
+<<<<<<< HEAD:src/main/resources/data/indrev/advancements/energy_enhancer.json
+            "item": "indrev:energy_enhancer"
+=======
             "item": "indrev:buffer_enhancer"
+>>>>>>> b150a33d2899d92929ad21494c6ef5910dca0d5a:src/main/resources/data/indrev/advancements/buffer_enhancer.json
           }
         ]
       }

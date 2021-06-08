@@ -10,8 +10,8 @@ import me.steven.indrev.items.armor.IRModularArmorItem
 import me.steven.indrev.items.armor.IRModuleItem
 import me.steven.indrev.items.energy.*
 import me.steven.indrev.items.misc.*
-import me.steven.indrev.items.enhancer.IREnhancerItem
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
+import me.steven.indrev.items.upgrade.IREnhancerItem
 import me.steven.indrev.networks.EndpointData
 import me.steven.indrev.tools.IRToolMaterial
 import me.steven.indrev.tools.modular.ArmorModule
@@ -190,12 +190,11 @@ object IRItemRegistry {
 
         identifier("empty_enhancer").item(DEFAULT_ITEM())
         identifier("buffer_enhancer").item(BUFFER_ENHANCER)
-        identifier("speed_enhancer").item(SPEED_ENHANCER)
-        identifier("energy_enhancer").item(ENERGY_ENHANCER)
-        identifier("blast_furnace_enhancer").item(BLAST_FURNACE_ENHANCER)
-        identifier("smoker_enhancer").item(SMOKER_ENHANCER)
-        identifier("damage_enhancer").item(DAMAGE_ENHANCER)
-
+        identifier("speed_enhancer").item(SPEED_UPGRADE)
+        identifier("energy_enhancer").item(ENERGY_UPGRADE)
+        identifier("blast_furnace_enhancer").item(BLAST_FURNACE_UPGRADE)
+        identifier("smoker_enhancer").item(SMOKER_UPGRADE)
+        identifier("damage_enhancer").item(DAMAGE_UPGRADE)
 
         identifier("energy_reader").item(ENERGY_READER)
 
@@ -325,12 +324,11 @@ object IRItemRegistry {
     val NETHERITE_DRILL_HEAD = Item(itemSettings().maxDamage(4096))
 
     val BUFFER_ENHANCER = IREnhancerItem(itemSettings().maxCount(32), Enhancer.BUFFER)
-    val SPEED_ENHANCER = IREnhancerItem(itemSettings().maxCount(32), Enhancer.SPEED)
-    val ENERGY_ENHANCER = IREnhancerItem(itemSettings().maxCount(32), Enhancer.ENERGY)
-    val BLAST_FURNACE_ENHANCER = IREnhancerItem(itemSettings().maxCount(1), Enhancer.BLAST_FURNACE)
-    val SMOKER_ENHANCER = IREnhancerItem(itemSettings().maxCount(1), Enhancer.SMOKER)
-    val DAMAGE_ENHANCER = IREnhancerItem(itemSettings().maxCount(1), Enhancer.DAMAGE)
-
+    val SPEED_UPGRADE = IREnhancerItem(itemSettings().maxCount(32), Enhancer.SPEED)
+    val ENERGY_UPGRADE = IREnhancerItem(itemSettings().maxCount(32), Enhancer.ENERGY)
+    val BLAST_FURNACE_UPGRADE = IREnhancerItem(itemSettings().maxCount(1), Enhancer.BLAST_FURNACE)
+    val SMOKER_UPGRADE = IREnhancerItem(itemSettings().maxCount(1), Enhancer.SMOKER)
+    val DAMAGE_UPGRADE = IREnhancerItem(itemSettings().maxCount(1), Enhancer.DAMAGE)
 
     val WRENCH = IRWrenchItem(itemSettings().maxCount(1))
 

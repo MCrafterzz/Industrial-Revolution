@@ -8,17 +8,19 @@ import me.steven.indrev.components.TemperatureComponent
 import me.steven.indrev.components.multiblock.FactoryStructureDefinition
 import me.steven.indrev.components.multiblock.MultiBlockComponent
 import me.steven.indrev.inventories.inventory
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.recipes.machines.IRRecipeType
 import me.steven.indrev.recipes.machines.InfuserRecipe
 import me.steven.indrev.registry.MachineRegistry
+import net.minecraft.block.BlockState
 import net.minecraft.screen.ArrayPropertyDelegate
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 
-class SolidInfuserFactoryBlockEntity(tier: Tier) :
-    CraftingMachineBlockEntity<InfuserRecipe>(tier, MachineRegistry.SOLID_INFUSER_FACTORY_REGISTRY) {
+class SolidInfuserFactoryBlockEntity(tier: Tier, pos: BlockPos, state: BlockState) :
+    CraftingMachineBlockEntity<InfuserRecipe>(tier, MachineRegistry.SOLID_INFUSER_FACTORY_REGISTRY, pos, state) {
 
-    override val enhancementsSlots: IntArray = intArrayOf(2, 3, 4, 5)
+    override val enhancerSlots: IntArray = intArrayOf(2, 3, 4, 5)
     override val availableEnhancers: Array<Enhancer> = Enhancer.DEFAULT
 
     init {

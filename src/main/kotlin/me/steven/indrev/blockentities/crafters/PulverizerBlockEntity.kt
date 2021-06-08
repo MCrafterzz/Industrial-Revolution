@@ -3,15 +3,17 @@ package me.steven.indrev.blockentities.crafters
 import me.steven.indrev.api.machines.Tier
 import me.steven.indrev.components.TemperatureComponent
 import me.steven.indrev.inventories.inventory
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.recipes.machines.IRRecipeType
 import me.steven.indrev.recipes.machines.PulverizerRecipe
 import me.steven.indrev.registry.MachineRegistry
+import net.minecraft.block.BlockState
+import net.minecraft.util.math.BlockPos
 
-class PulverizerBlockEntity(tier: Tier) :
-    CraftingMachineBlockEntity<PulverizerRecipe>(tier, MachineRegistry.PULVERIZER_REGISTRY) {
+class PulverizerBlockEntity(tier: Tier, pos: BlockPos, state: BlockState) :
+    CraftingMachineBlockEntity<PulverizerRecipe>(tier, MachineRegistry.PULVERIZER_REGISTRY, pos, state) {
 
-    override val enhancementsSlots: IntArray = intArrayOf(5, 6, 7, 8)
+    override val enhancerSlots: IntArray = intArrayOf(5, 6, 7, 8)
     override val availableEnhancers: Array<Enhancer> = Enhancer.DEFAULT
 
     init {

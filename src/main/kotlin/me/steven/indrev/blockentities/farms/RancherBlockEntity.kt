@@ -8,7 +8,7 @@ import me.steven.indrev.api.machines.properties.Property
 import me.steven.indrev.blockentities.crafters.EnhancerProvider
 import me.steven.indrev.config.BasicMachineConfig
 import me.steven.indrev.inventories.inventory
-import me.steven.indrev.items.enhancer.Enhancer
+import me.steven.indrev.items.upgrade.Enhancer
 import me.steven.indrev.registry.MachineRegistry
 import me.steven.indrev.utils.FakePlayerEntity
 import me.steven.indrev.utils.eat
@@ -18,16 +18,18 @@ import net.minecraft.entity.damage.DamageSource
 import net.minecraft.entity.passive.AnimalEntity
 import net.minecraft.item.ItemStack
 import net.minecraft.item.SwordItem
-import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.screen.ArrayPropertyDelegate
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.util.ActionResult
 import net.minecraft.util.Hand
+import net.minecraft.util.math.BlockPos
 
-class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.RANCHER_REGISTRY), EnhancerProvider {
+class RancherBlockEntity(tier: Tier, pos: BlockPos, state: BlockState)
+    : AOEMachineBlockEntity<BasicMachineConfig>(tier, MachineRegistry.RANCHER_REGISTRY, pos, state), EnhancerProvider {
 
     override val backingMap: Object2IntMap<Enhancer> = Object2IntArrayMap()
-    override val enhancementsSlots: IntArray = intArrayOf(15, 16, 17, 18)
+    override val enhancerSlots: IntArray = intArrayOf(15, 16, 17, 18)
     override val availableEnhancers: Array<Enhancer> = Enhancer.DEFAULT
 
     init {
@@ -53,12 +55,12 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
     override fun machineTick() {
         if (world?.isClient == true) return
         val inventory = inventoryComponent?.inventory ?: return
-        val enhancements = getEnhancers(inventory)
-        cooldown += Enhancer.getSpeed(enhancements, this)
+        val upgrades = getEnhancers(inventory)
+        cooldown += Enhancer.getSpeed(upgrades, this)
         if (cooldown < config.processSpeed) return
         val animals = world?.getEntitiesByClass(AnimalEntity::class.java, getWorkingArea()) { true }?.toMutableList()
             ?: mutableListOf()
-        val energyCost = Enhancer.getEnergyCost(enhancements, this)
+        val energyCost = Enhancer.getEnergyCost(upgrades, this)
         if (animals.isEmpty() || !canUse(energyCost)) {
             workingState = false
             return
@@ -70,6 +72,7 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
             val kill = filterAnimalsToKill(animals)
             if (kill.isNotEmpty()) use(energyCost)
             kill.forEach { animal ->
+                if (!animal.isAlive || !animal.damage(DamageSource.player(fakePlayer), swordItem.attackDamage)) return@forEach
                 swordStack.damage(1, world?.random, null)
                 if (swordStack.damage >= swordStack.maxDamage) swordStack.decrement(1)
 
@@ -107,11 +110,11 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         if (animalEntity.isBreedingItem(stack)) {
             val breedingAge: Int = animalEntity.breedingAge
             if (!world!!.isClient && breedingAge == 0 && animalEntity.canEat() && size <= matingLimit && mateAdults) {
-                animalEntity.eat(fakePlayer, stack)
+                animalEntity.eat(fakePlayer, Hand.MAIN_HAND, stack)
                 animalEntity.lovePlayer(fakePlayer)
             }
             if (animalEntity.isBaby && feedBabies) {
-                animalEntity.eat(fakePlayer, stack)
+                animalEntity.eat(fakePlayer, Hand.MAIN_HAND, stack)
                 animalEntity.growUp(((-breedingAge / 20f) * 0.1f).toInt(), true)
             }
             return ActionResult.SUCCESS
@@ -128,20 +131,20 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         }.flatten()
     }
 
-    override fun getBaseValue(enhancer: Enhancer): Double =
-        when (enhancer) {
+    override fun getBaseValue(upgrade: Enhancer): Double =
+        when (upgrade) {
             Enhancer.ENERGY -> config.energyCost
             Enhancer.SPEED -> 1.0
             Enhancer.BUFFER -> config.maxEnergyStored
             else -> 0.0
         }
 
-    override fun getMaxEnhancer(enhancer: Enhancer): Int {
-        return if (enhancer == Enhancer.SPEED) return 1 else super.getMaxEnhancer(enhancer)
+    override fun getMaxCount(upgrade: Enhancer): Int {
+        return if (upgrade == Enhancer.SPEED) return 1 else super.getMaxCount(upgrade)
     }
 
-    override fun toTag(tag: CompoundTag?): CompoundTag {
-        super.toTag(tag)
+    override fun writeNbt(tag: NbtCompound?): NbtCompound {
+        super.writeNbt(tag)
         tag?.putBoolean("feedBabies", feedBabies)
         tag?.putBoolean("mateAdults", mateAdults)
         tag?.putInt("matingLimit", matingLimit)
@@ -149,15 +152,15 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         return tag!!
     }
 
-    override fun fromTag(state: BlockState?, tag: CompoundTag?) {
-        super.fromTag(state, tag)
+    override fun readNbt(tag: NbtCompound?) {
+        super.readNbt(tag)
         feedBabies = tag?.getBoolean("feedBabies") ?: feedBabies
         mateAdults = tag?.getBoolean("mateAdults") ?: mateAdults
         matingLimit = tag?.getInt("matingLimit") ?: matingLimit
         killAfter = tag?.getInt("killAfter") ?: killAfter
     }
 
-    override fun toClientTag(tag: CompoundTag?): CompoundTag {
+    override fun toClientTag(tag: NbtCompound?): NbtCompound {
         super.toClientTag(tag)
         tag?.putBoolean("feedBabies", feedBabies)
         tag?.putBoolean("mateAdults", mateAdults)
@@ -166,7 +169,7 @@ class RancherBlockEntity(tier: Tier) : AOEMachineBlockEntity<BasicMachineConfig>
         return tag!!
     }
 
-    override fun fromClientTag(tag: CompoundTag?) {
+    override fun fromClientTag(tag: NbtCompound?) {
         super.fromClientTag(tag)
         feedBabies = tag?.getBoolean("feedBabies") ?: feedBabies
         mateAdults = tag?.getBoolean("mateAdults") ?: mateAdults
